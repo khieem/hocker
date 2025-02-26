@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/mount.h>
+#include <pwd.h>
 
 void unshare_namespace()
 {
@@ -34,6 +35,17 @@ void start_container(char *path, char **argv, char** envp)
 		exit(EXIT_FAILURE);
 	}
 
+	char* uid = getenv("SUDO_UID");
+	struct passwd *pwd;
+	pwd = getpwuid(atoi(uid));
+	if (pwd == NULL)
+	{
+		char command[100];
+		snprintf(command, 100, "addgroup -g %s user && adduser -G user -s /bin/sh -Du %s user", uid, uid);
+		system(command);
+	}
+
+	seteuid(1000);
 	execve(path, argv, envp);
 }
 
