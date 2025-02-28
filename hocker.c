@@ -35,17 +35,31 @@ void start_container(char *path, char **argv, char** envp)
 		exit(EXIT_FAILURE);
 	}
 
-	char* uid = getenv("SUDO_UID");
+	uid_t uid;
+	gid_t gid;
+	if (getenv("SUDO_UID"))
+	{
+		uid = atoi(getenv("SUDO_UID"));
+		gid = atoi(getenv("SUDO_GID"));
+	}
+	else
+	{
+		uid = getuid();
+		gid = getgid();
+	}
+
 	struct passwd *pwd;
-	pwd = getpwuid(atoi(uid));
-	if (pwd == NULL)
+	pwd = getpwuid(uid);
+	if (!pwd)
 	{
 		char command[100];
-		snprintf(command, 100, "addgroup -g %s user && adduser -G user -s /bin/sh -Du %s user", uid, uid);
+		snprintf(command, 100, "addgroup -g %u user && adduser -G user -s /bin/sh -Du %u user", gid, uid);
 		system(command);
 	}
 
-	seteuid(1000);
+	setgid(gid);
+	setuid(uid);
+	
 	execve(path, argv, envp);
 }
 
